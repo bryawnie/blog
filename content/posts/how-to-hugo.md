@@ -5,6 +5,8 @@ draft: false
 toc: false
 ---
 
+Este blog fue creado usando una applicación de Hugo. A modo de no olvidar cómo hice esto y también como guía por si le sirve a alguien más, dejo los pasos que seguí para levantar la aplicación a través de Github Pages.
+
 # ¿Cómo levantar un sitio simple usando Hugo?
 El proceso en general es simple, aunque debo admitir que me vi complicado en varios momentos, más que nada por *apurete* y no leer con su debido cuidado la documentación. Iré pasito a pasito por si a alguien más le sirve!
 
@@ -31,7 +33,11 @@ El proceso en general es simple, aunque debo admitir que me vi complicado en var
     resources/
     ```
     Con ello, sólo se cargaran los archivos estrictamente necesarios, y no los compilados.
-7. __Establecer Workflow__: para el despliegue de la aplicación utilizaremos *Github Actions*. Para ello hay que indicarle a Github el flujo de despliegue para el repositorio.
+7. __Definir URL__: En `config.toml` ajusta `baseURL` con la URL final del sitio, por ejemplo:
+    ```
+    baseURL = "https://USERNAME.github.io/REPO/"
+    ```
+8. __Establecer Workflow__: para el despliegue de la aplicación utilizaremos *Github Actions*. Para ello hay que indicarle a Github el flujo de despliegue para el repositorio.
     - Crear archivo con instrucciones: `.github/workflows/deploy.yml`
     - Rellenar con instrucciones para despliegue de aplicaciones hugo. Las dejo a continuación:
         ```yml
@@ -85,5 +91,6 @@ El proceso en general es simple, aunque debo admitir que me vi complicado en var
     - Finalmente, queda habilitar el despliegue mediante Github pages. Para ello hay que ir a `Settings > Pages`, y:
         - En *Build and deployment* hay que establecer la fuente o *source* a *Deploy from a branch*.
         - Luego, establecemos que la branch sea `gh-pages`.
+    - *Opcional*: Si usas un dominio personalizado, añade un archivo `CNAME` dentro de `static/` con tu dominio (por ejemplo `example.com`). El action preservará ese archivo y lo publicará.
 
-(Nota en construcción)
+Ojalá te sirva el instructivo :)
