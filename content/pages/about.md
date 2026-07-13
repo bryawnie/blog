@@ -5,8 +5,10 @@ author: Bryan
 toc: false
 ---
 
-¡Hola! Soy Bryan, tengo 25 años y vivo en Santiago de Chile.
+¡Hola! Soy Bryan, tengo 27 años y vivo en Santiago de Chile.
 
-Me gustan mucho los brownies (eso quizá te haga sentido), los dinosaurios, los puzzles y la criptografía. En ocasiones visito cafeterías, porque nada mejor que un buen cafecito. Me entretiene el volley pero la verdad no soy muy bueno jugando.
+Me gustan mucho los brownies (eso quizá te haga sentido), los dinosaurios, los puzzles y la criptografía. 
 
-Actualmente me encuentro terminando mi Magíster en Computación.
+Disfruto mucho dar paseos por la ciudad observando los árboles, edificios, perritos regalones o nubes con formas graciosas. En ocasiones visito cafeterías random, porque nada mejor que un buen cafecito y algo dulce para acompañarlo. Suelo leer alguno que otro libro de vez en cuando, y me entretiene jugar volley y basketball. 
+
+Bienvenid@ a mi blog. No es mucho pero es trabajo honesto como dicen.
