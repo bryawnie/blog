@@ -1,577 +1,108 @@
 ---
-title: "Usando FP-TS (draft)"
-date: 2024-08-14T10:50:40-04:00
-draft: true
+title: "Mi experiencia con FP-TS"
+date: 2026-07-16T22:08:51-03:00
+draft: false
 ---
 
-## Option
+## Introducción
+
+A lo largo de mis años estudiando ingeniería, uno de mis ramos favoritos fue "Lenguajes de Programación". Ese curso era como una introducción bastante completa a las bases de cualquier lenguaje: no solo nos enseñaba cómo se construyen las cosas, sino también qué semánticas hay detrás, cómo se implementan y qué implicancias tienen en la práctica. Para mí, fue la primera vez que me topé con la programación funcional: una forma de programar más matemática, más limpia y, al menos en mi cabeza, más "pura".
+
+La idea general, en términos muy simples, es esta:
+
+- **Funciones puras**: no tienen efectos secundarios como mutar variables externas o escribir en el sistema de archivos.
+- **Funciones de primera clase**: las funciones pueden tratarse como valores; por ejemplo, una función puede recibir otra función como parámetro o devolverla.
+- **Transparencia referencial e inmutabilidad**: el estado de una variable no cambia de forma arbitraria, así que en muchos casos puedes pensar en el código de forma más predecible.
+
+No quiero hacer una definición ultraprecisa ni mucho menos, pero esa fue la sensación que me dejó al principio: algo más ordenado, más declarativo y, en cierto modo, más elegante.
+
+Con el tiempo empecé a adoptar más este paradigma. Eso significó usar cosas como `map` y `reduce` en vez de `while` y `for`, aprovechar funciones `lambda` y empezar a pensar menos en "cómo hacer algo" y más en "qué quiero expresar". En parte por comodidad, en parte porque el código se veía más limpio y, claro, también porque me hacía sentir un poquito más cool.
+
+> Para dejar un ejemplo simple, así se ve la versión imperativa de armar una lista `LOut` a partir de aplicar una función `foo` a cada elemento de `LIn`:
+>
+> ```py
+> LOut = []
+> for x in LIn:
+>     y = foo(x)
+>     LOut.append(y)
+> ```
+>
+> Y así luce la versión funcional (ejemplo algo tramposo porque map de Python devuelve un iterador).
+>
+> ```py
+> LOut = list(map(foo, LIn))
+> ```
+
+### Inicios con FP-TS
+
+Cuando postulé para trabajar en Bemmbo (ahora Buk Finanzas), Ismael, uno de los desarrolladores de la startup, me dijo que dentro del stack usaban una librería llamada FP-TS. Lo dijo casi como si estuviera diciendo "esto te va a gustar", y en realidad tenía bastante razón.
+
+> _Yo conocía a Ismael de la universidad, fuimos ayudantes de un ramo y a ambos nos gustaba la volá' teórica._
+
+Al principio no me convenció del todo. Vi un tutorial de YouTube ([disponible aquí](https://www.youtube.com/watch?v=WsKEIFirdVc&list=PLUMXrUa_EuePN94nJ2hAui5nWDj8RO3lH)) donde explicaban lo básico: `pipe`, `flow`, `Option`, `Either`, `IO` y un montón de "modismos" que, si bien tenían sentido, se sentían como una capa extra sobre TypeScript. Mi primera impresión fue más o menos que "estamos metiendo wrappers innecesarios". Tenía que pensar primero cómo resolver una funcionalidad en TypeScript _vanilla_ y después darle otra vuelta para expresarla con la jerga de FP-TS. Eso me hizo ir muy lento al comienzo, y en mis primeras pull requests recibí bastante feedback.
+
+![Primeras pull requests en Bemmbo](media/first-pr-bemmbo.png)
+
+### Interiorizando la idea
+
+Uno de los puntos que más me llamó la atención de la programación funcional es que te hace pasar de enfocarte en el cómo al qué. En vez de escribir bucles detallados diciéndole al computador paso a paso qué hacer, empiezas a describir el flujo de forma más declarativa.
+
+FP-TS me pareció bastante bueno en ese sentido. Te da un montón de primitivas que, una vez las dominas, hacen que el código sea más expresivo y más fácil de componer. Lo que más me gustó fue esto:
+
+- Los errores se vuelven un valor más explícito, como `Left`/`Right`, en vez de depender tanto de `throw` y `try/catch`.
+- La asincronía y los errores se pueden modelar con `Task` y `TaskEither`.
+- Los efectos se pueden aislar mejor con `IO`.
+
+Eso sí, también hay un lado menos glamoroso: al principio todo se siente más verboso y más abstracto. No es magia, y no siempre hace que el código sea más corto.
+
+Para dar un ejemplo más concreto, esta idea de "validar algo, luego transformarlo y luego enviarlo" se vuelve bastante natural con `pipe`. Por ejemplo:
+
+> Quiero que este _record_ se extienda en una lista en base a sus parametros, luego quiero usar cada valor de esa lista para armar un payload, y enviar multiples _requests_ en paralelo a una API externa.
+
+Luce mas o menos así:
 
 ```ts
-type Option<A> = Some<A> | None
-```
-Podemos pensar en Option como una caja, la cual puede o no contener un elemento de tipo `A`. En general se usa para representar el resultado de un cómputo que podría fallar. Por ejemplo:
-
-```ts
-import * as O from 'fp-ts/Option'; // Standard import
-
-const inverse = (x: number): O.Option<number> => 
-    x == 0 ? O.none : O.some(1 / x)
+const result = await pipe(
+  initialValue,
+  R.collect(S.Ord)(retrieveProperty),
+  A.map(buildPayload),
+  A.map(sendPayload),
+  A.sequence(TE.ApplicativePar),
+)();
 ```
 
-Evitamos que se levante un error, y en su lugar lo podemos gestionar por nuestra cuenta según lo retornado. Esto también ayuda a que se cumplan las promesas del tipeo.
+Con el tiempo, la cosa cambió bastante. Me pasó algo similar a cuando uno aprende un nuevo idioma: al inicio uno expresa la idea en su lenguaje nativo y luego la traduce, mientras que en la fase más madura uno expresa directamente la idea en el lenguaje final. Aquí fue algo parecido, ya no pensaba "cómo haría esto en TypeScript normal" y después "cómo lo traduzco a FP-TS". Empezaba a pensar directamente en flujos, composiciones y `pipe`s. No sé si eso es una señal de que me volví mejor programando, pero sí de que el modo de pensar había cambiado.
 
-### Pattern Matching
-Supongamos que queremos definir la función `getUIMsgWithInverse` que retorna un mensaje de usuario al intentar obtener el inverso de un número
-```ts
-const getUIMsgWithInverse = (x: number): string =>
-    pipe(
-        x,
-        inverse, // Option<number>
-        O.match(
-            () => `Cannot get the inverse of ${x}.`,
-            (ix) => `The inverse of ${x} is ${ix}.`,
-        ) // string
-    )
-```
+### Adopción de FP-TS
 
-También podemos crear una función `safeInverse`, que en caso de que la división se encuentre indefinida retorne 0:
-```ts
-import identity from 'fp-ts/function';
+He tenido la oportunidad de trabajar en un _codebase_ bastante grande, y ahí fue donde el tema se volvió más interesante. Había features implementadas hace tres años, cuando el equipo recién estaba empezando a adoptar fp-ts, y otras implementadas literalmente ayer. La diferencia era abismal.
 
-const safeInverse = (x: number): number => 
-    pipe(
-        x,
-        inverse, // Option<number>
-        O.match(
-            () => 0,
-            identity,
-        ) // number
-    )
-```
-O incluso, podemos hacerlo de una forma mucho más sencilla utilizando `getOrElse(onNone)`:
-```ts
-const safeInverse = (x: number): number => 
-    pipe(
-        x,
-        inverse, // Option<number>
-        O.getOrElse(() => 0), // number
-    )
-```
-> *Notemos que el tipo devuelto por el fallback debe coincidir con el tipo dentro del Option.some. Para devolver tipos distintos según el caso, podemos utilizar `getOrElseW` (similar en `match` y `matchW`).*
+El código más viejo me recordaba a mis primeros pasos con la librería: intentos de usar sus utilidades de forma forzada, con wrappers de `Either` que al final terminaban haciendo un `throw`, y muchas soluciones que intentaban "hacerlo parecer" funcional sin terminar de aprovechar lo bueno de la herramienta. En cambio, el código más nuevo se veía mucho más robusto, más legible y más estructurado.
 
-### Nullables
-Podemos hacer wrapping de nullable values usando Options:
+Y aquí viene algo que me parece importante: no era solo cuestión de tener mejor o peor código. El equipo también empezó a desarrollar una especie de identidad propia en torno a las convenciones. Había reglas más claras sobre cómo escribir cosas, qué cosas se promovían y qué cosas no. Eso hizo que el codebase se sintiera mucho más consistente.
 
-```ts
-const value1: number | null = 3
-const value2: number | null = null
+Eso sí, también me parece justo decir que fp-ts no es algo fácil de adoptar. Incluso para gente con bastante experiencia, el cambio de mentalidad cuesta. Y si eso es así, entonces no es raro que para un junior el onboarding sea un poco más duro. En ese sentido, quizá sí estabamos creando una barrera de entrada más y más alta con el tiempo.
 
-O.fromNullable(value1) // O.some(3)
-O.fromNullable(value2) // O.none
-```
+### Caída y fin de FP-TS (dentro del equipo)
 
-### Map, Flatten y Chain
-Consideremos la siguiente función que obtiene el primer elemento de un arreglo, que devuelve un *some* A si el arreglo tiene elementos, o un *none* en caso contrario.
-```ts
-const head = <A>(as: ReadonlyArray<A>): O.Option<A> =>
-    as.length === 0 ? O.none : O.some(as[0])
+Y acá viene la parte más curiosa: si era tan bueno, ¿por qué se murió?
 
-head([5, 6, 7]) // O.some(5)
-head([]) // O.none
-```
+![FP-TS meme](media/fp-ts.png)
 
-Supongamos ahora que queremos definir una nueva función llamada `getBestMovie`, la cual, dado un arreglo con muchos títulos ordenados por ranking, devuelve un string que indica el título en mayúsculas junto con un label de *Mejor Película*.
-```ts
-const getBestMovie = 
-    (titles: ReadonlyArray<string>): O.Option<string> =>
-        pipe(
-            titles,
-            head, // Option<string>
-            O.map((s) => s.toUpperCase()), // Option<string>
-            O.map((s) => `Mejor Película - ${s}`), // Option<string>
-        )
-```
+Bueno, no se "murió" del todo, pero sí perdió fuerza. Por varios motivos:
 
-En ocasiones, encadenar funciones en un pipe puede hacer que obtengamos Options anidados, como en el siguiente caso:
-```ts
-const invHead = (ns: ReadonlyArray<number>) =>
-    pipe(
-        ns,
-        head, // Option<number>
-        O.map(inverse), // Option<Option<number>>
-        O.flatten,
-    )
-```
-En realidad es bastante común aplicar map y luego un flatten, por lo que se encuentra definido `chain` que hace ambas cosas de una sola vez :)
-```ts
-    O.chain(inverse)
-```
+1. Adoptar esta forma de programar requiere tiempo. Y en un entorno donde se necesitan sacar features rápido, ese tiempo no siempre está.
+2. La librería `fp-ts` dejó de tener mantenimiento continuo hace bastante, y su sucesora, EffectTS, tiene una barrera de entrada aún mayor. Dentro del equipo no parecía valer la pena meterla al stack.
+3. Como `fp-ts` no es tan masificado, los agentes de IA también se complican cuando tienen que explorar el código. Muchas veces se equivocan inventando funciones que no existen o que no encajan con la forma en que el equipo estaba trabajando.
 
-### From Predicate
-En general, un predicado indica cuando cierto elemento satisface una condición. Podemos basarnos en estos predicados para crear Options según el valor del mismo:
-```ts
-const isEven = (a: number) => a%2 === 0
+Todo eso hizo que se dejara de impulsar tanto su uso, y el equipo terminó moviéndose más hacia estándares de TypeScript vanilla.
 
-const getEven = O.fromPredicate(isEven)
-// (a: number) => Option<number>
+Eso no significa que todo lo que aprendimos con fp-ts se haya perdido. De hecho, creo que algunas cosas sí se quedaron para siempre: pensar más en abstracciones, escribir de forma más declarativa y estar más cómodo con ideas como pattern matching y currificación. Y aunque ya no impulsemos el uso de la librería en las nuevas implementaciones, sigue habiendo valor en esos conceptos.
 
-getEven(4) // O.some(4)
-getEven(5) // O.none
-```
+### Conclusiones finales
 
-### Error Handling
-Consideremos que buscamos crear iuna función `getMovieHighlight`, la cual recibe una instancia de película y retorna un string con una característica destadada de esta:
-```ts
-type Movie = Readonly <{
-    title: string
-    releaseYear: number
-    ratingPosition: number
-    award?: string
-}>
+¿Extraño usar fp-ts? Creo que sí, el cambio igual fue reciente. Llegó un punto en que casi todo lo que implementaba lo pensaba como una serie de pasos conectados con un `pipe`, y eso me gustó mucho. Pero también creo que es importante ser honesto con los límites: no es una solución universal, y no todo proyecto necesita ese nivel de abstracción.
 
-const movie1: Movie = {
-    title: 'Sharknado 10',
-    releaseYear: 2023,
-    ratingPosition: 1,
-    award: 'Oscar'
-}
+Lo que sí me llevo de esa experiencia es que, más allá de la herramienta, me quedó una forma distinta de pensar el código. Y eso, al menos para mí, vale mucho.
 
-const movie2: Movie = {
-    title: 'Night in the Day',
-    releaseYear: 2024,
-    ratingPosition: 2,
-}
-
-const movie3: Movie = {
-    title: 'Me sleeping 12 hours',
-    releaseYear: 1200,
-    ratingPosition: 13728,
-}
-
-const getMovieAwardHighlight =
-    (movie: Movie): O.Option<string> =>
-        pipe(
-            movie.award, // string | undefined
-            O.fromNullable, // Option<string>
-            O.map((award) => `Premiado con: ${award}`),
-        ) // Option<string>
-
-const getMovieTop10Highlight =
-    (movie: Movie): O.Option<string> =>
-        pipe(
-            movie,
-            O.fromPredicate(({ratingPosition}) =>
-                ratingPosition <= 10
-            ), // Option<Movie>
-            O.map(({ratingPosition}) => 
-                `En el TOP 10 en posición: ${ratingPosition}`
-            ), // Option<string>
-        )
-
-const getMovieHighlight = (movie: Movie): string => 
-    pipe(
-        movie,
-        getMovieAwardHighlight, // Option<string>
-        O.alt(() => // Si el anterior es O.none, entra aquí
-            getMovieTop10Highlight(movie)
-        ), // Option<string>
-        O.getOrElse(() => // Fallback option
-            `Estrenada en ${movie.releaseYear}`
-        ), // string
-    )
-```
-> *Notar que el flujo alternativo debe retornar el mismo tipo que el flujo principal, en este caso, un `Option<string>`. Para omitir esto, podemos usar `altW` (widening).*
-
-## Either
-Representa el resultado de un cómputo que podría **fallar**. En términos prácticos, puede ser visto como una solución ante las limitantes del tipo `Option`. Si bien hasta ahora sabemos que `Option` es bastante versátil:
-```ts
-type Option<A> = Some<A> | None
-```
-Tenemos el problema de que en caso de error, obtenemos un `None`, lo cual es muy poco descriptivo. En su lugar, resulta útil el tipo `Either`:
-```ts
-type Either<E, A> = Left<E> | Right<A> 
-```
-Donde usualmente `E` es el tipo del error, mientras que `A` es el tipo del resultado del cómputo. Veremos más sobre este tipo a continuación:
-
-```ts
-import * as E from 'fp-ts/Either'
-
-type Account = Readonly<{
-    balance: number
-    frozen: boolean
-}>
-
-type Cart = Readonly<{
-    items: Item[]
-    total: number
-}>
-
-type AccountFrozen = Readonly<{
-    type: 'AccountFrozen'
-    message: string
-}>
-
-type NotEnoughBalance = Readonly <{
-    type: 'NotEnoughBalance'
-    message: string
-}>
-
-const pay = 
-    (ammount: number) =>
-        (account: Account): E.Either<
-            AccountFrozen | NotEnoughBalance, 
-            Account
-        > =>
-        account.frozen
-            ? E.left({
-                type: 'AccountFrozen',
-                message: '¡No puedes pagar con una cuenta congelada!',
-            }) 
-            : account.balance < amount 
-                ? E.left({
-                    type: 'NotEnoughBalance',
-                    message: `No puedes pagar ${amount} con un balance de ${account.balance}`,
-                }) 
-                : E.right({
-                    ...account,
-                    balance: account.balance - amount
-                })
-
-const checkout = 
-    (cart: Cart) =>
-        (account: Account) =>
-            pipe(s
-                account,
-                pay(cart.total),
-                E.match( // Output pattern matching
-                    (e) => 'Handle error ...',
-                    (a) => 'Hamdle success ...',
-                )
-            )
-```
-Una de las mayores ventajas de usar un tipo `Either` en lugar de levantar un error, es que nos ofrece la posibilidad de el tipo del error se encuentra directamente codificado dentro del tipo retornado por la función.
-
-### Error Pattern Matching
-Así como hicimos pattern matching sobre el resultado de la función  (error vs output correcto), podemos discernir entre los distintos tipos de error.
-```ts
-import { makeMatch } from 'ts-adt/MakeADT'
-
-const matchError = makeMatch('type');
-
-E.match( // Output pattern matching
-    matchError({
-        AccountFrozen: (e) => 'cuenta congelada',
-        NotEnoughBalance: (e) => 'faltan fondos',
-    }),
-    (a) => 'Handle success ...',
-)
-```
-
-### Try Catch
-Utilizar funciones que pueden fallar (arrojar una excepción) presenta complicaciones en un estilo funcional, donde estas pueden estar encadenadas u operar de forma consecutiva. Ahora veremos cómo hacer un wrapper para estos tipos de funciones, de modo que siempre obtengamos un objeto de tipo `Either`.
-
-Usamos como ejemplo la función `JSON.parse`:
-```ts
-const jsonParse = (text: string): E.Either<Error, unknown> => {
-    try {
-        const result = JSON.parse(text)
-        return E.right(result)
-    } catch (e) {
-        const error = e instanceof Error ? e : new Error (String(e))
-        return E.left(error)
-    }
-}
-```
-Si bien esto soluciona el problema, sigue un estilo imperativo y no funcional, por lo que en su lugar utilizaremos `E.tryCatch`, método que nos permite crear una instancia de `Either` a partir de una función que *podría* fallar.
-```ts
-const tryCatch: <E, A> (
-    f: () => A, onThrow: (e: unknown) => E
-) => Either<E, A>
-```
-Apliquémoslo al primer ejemplo:
-```ts
-const jsonParse = (text: string): E.Either<Error, unknown> => 
-    E.tryCatch(
-        () => JSON.parse(text),
-        E.toError,
-    )
-```
-Esto nos ofrece una solución mucho más limpia. Ahora bien, podemos hacerla aún más limpia utilizando `tryCatchK`:
-```ts
-const tryCatchK: <A extends unknown[], B, E>(
-    f: (...a: A) => B,
-    onThrow: (e: unknown) => E
-) => (...a: A) => Either<E, B>
-```
-Entonces, la forma más concisa de ejecutar el `JSON.parse` sería:
-```ts
-const jsonParse = E.tryCatchk(JSON.parse, E.toError)
-```
-> *Notar que el error que se obtiene podría llegar a no ser tan descriptivo, y que el tipo retornado por `jsonParse` se indica como  `any` en lugar de `unknown`. Idealmente manejar los errores apropiadamente con tipos específicos según el error. *
-
-### Map, MapLeft & Bimap
-En ocasiones podemos querer aplicar transformaciones sobre los tipos de un `Either`.
-```ts
-import * as J from 'fp-ts/Json'
-
-type Response = Readonly<{
-    body: string
-    contentLength: number
-}>
-
-type JsonStringifyError = Readonly<{
-    type: 'JsonStringifyError'
-    error: Error
-}>
-
-const createResponse = (payload: unknown): E.Either<
-    JsonStringifyError, Response> =>
-    pipe(
-        payload,
-        J.stringify, // Either<unknown, string>
-        E.map((s) => ({
-            body: s,
-            contentLength: s.length,
-        })), // Either<unknown, Response>
-        E.mapLeft((e) => ({
-            type: 'JsonStringifyError',
-            error: E.toError(e),
-        })), // Either<JsonStringifyError, Response>
-    )
-```
-La función `Either.map` se aplica sólo sobre el valor `Right`, y produce como resultado un nuevo `Either`. A su vez, `Either.mapLeft` aplica solo sobre el valor `Left`.
-
-En este caso particular, estamos aplicando un mapeo tanto en el valor de la izquierda como el de la derecha. Luego, podemos simplificar la expresión mediante el uso de `bimap`, la cual nos permite espeficicar dos funciones, una que se aplica sobre el valor de la izquierda, y la segunda sobre el valor de la derecha.
-```ts
-E.bimap(
-    (s) => ({
-        body: s,
-        contentLength: s.length,
-    }),
-    (e) => ({
-        type: 'JsonStringifyError',
-        error: E.toError(e),
-    }),
-)
-```
-
-### FlatMap
-En ocasiones podemos tener secuencias de operaciones, cada una de las cuales puede fallar en determinado momento. Consideremos el tipo `User`:
-```ts
-import base64 from 'base-64'
-
-type User = Readonly<{
-    id: number
-    username: string
-}>
-
-type Base64DecodeError = Readonly<{
-    type: 'Base64DecodeError'
-    error: Error
-}>
-
-const base64Decode = E.tryCatchK(
-    base64.decode,
-    (e): Base64DecodeError => ({
-        type: 'Base64DecodeError',
-        error: E.toError(e),
-    })
-)
-
-declare const decodeUserObjectFromUnknown: (u: unknown) =>
-    E.Either<InvalidUserObject, User>
-
-const decodeUser = (encodedUser: string) => 
-    pipe(
-        encodedUser,
-        base64Decode, // Either<Base64DecodeError, string>
-        E.map(jsonParse), // Either<Base64DecodeError, Either<JsonParseError, unknown>>
-        E.flattenW, // Either<Base64DecodeError | JsonParseError, unknown>
-        ...
-    )
-```
-La combinación de `map` con `flattenW` es una práctica común, la cual se puede resumir en `flatMap` (`E.flatMap(jsonParse)`).
-```ts
-const decodeUser = (encodedUser: string) => 
-    pipe(
-        encodedUser,
-        base64Decode, // Either<Base64DecodeError, string>
-        E.flatMap(jsonParse), 
-            // Either<Base64DecodeError | JsonParseError, unknown>
-        E.flatMap(decodeUserObjectFromUnknown), 
-            // Either<Base64DecodeError | JsonParseError | InvalidUserObject, User>
-    )
-```
-
-### OrElse Error Recovery
-Supongamos una página de inicio de sesión, en la cual el usuario puede ya sea ingresar un correo electrónico o un número de teléfono. Nuestro objetivo entonces, es definir una función `validateLoginName` que valide el usuario ingresado.
-
-```ts
-const validateEmail = E.fromPredicate(
-    (maybeEmail: string) => emailRegex.test(maybeEmail),
-    (invalidEmail) => 
-        invalidEmail.includes('@') ?
-            'MalformedEmail' : 'NotAnEmail'
-)
-
-const validateLoginName = (loginName: string) =>
-    pipe(
-        loginName,
-        validateEmail, // E.Either<'MalformedMail' | 'NotAnEmail', string>
-    )
-```
-
-Si asumimos que la validación de correo electrónico falló, nos gustaría intentar ver si es un número de teléfono válido en su lugar. Para ello, necesitamos primero crear una función que nos valide números de teléfono:
-
-```ts
-const validatePhoneNumber = E.fromPredicate(
-    (maybePhoneNumber: string) => 
-        phoneNumberRegex.test(maybePhoneNumber),
-    () => 'InvalidPhoneNumber' as const,  
-)
-
-const validateLoginName = (loginName: string) =>
-    pipe(
-        loginName,
-        validateEmail, // E.Either<'MalformedMail' | 'NotAnEmail', string>
-        E.orElse((e) =>
-            e === 'NotAnEmail' ?
-                validatePhoneNumber(loginName) :
-                E.left(e)
-        ), // Either<'MalformedEmail' | 'InvalidPhoneNumber', string>
-    )
-```
-Cuando utilizamos `Either.orElse`, proveemos una función que, en caso de que la opción anterior haya producido un error (tener Left definido), provee una nueva instancia de `Either`.
-
-Hasta este punto, aplicamos una revisión del formato del nombre de usuario, verificando si es un correo electrónico válido o un número de teléfono. Si bien manejamos correctamente los errores, al obtener el resultado no sabemos qué tipo de login es. Usemos tipos!
-```ts
-type Email = Readonly<{
-    type: 'Email'
-    value: string
-}>
-
-const validateEmail = flow(
-    E.fromPredicate(
-        (maybeEmail: string) => emailRegex.test(maybeEmail),
-        (invalidEmail) => 
-            invalidEmail.includes('@') ?
-                'MalformedEmail' : 'NotAnEmail'
-    ),
-    E.map((email): Email => 
-        ({ type: 'Email', value: email })),
-)
-```
-Por el lado del teléfono:
-```ts
-type PhoneNumber = Readonlu<{
-    type: 'PhoneNumber'
-    value: string
-}>
-
-const validatePhoneNumber = flow(
-    E.fromPredicate(
-        (maybePhoneNumber: string) => 
-            phoneNumberRegex.test(maybePhoneNumber),
-        () => 'InvalidPhoneNumber' as const,  
-    ),
-    E.map((phoneNumber): PhoneNumber =>
-        ({ type: 'PhoneNumber', value: phoneNumber }))
-)
-```
-Esto nos genera problemas con el `orElse`, puesto que el tipo de la derecha puede ser tanto un `PhoneNumber` como `Email`, mientras que la validación previa sólo considera un `Email`. Para solucionarlo utilizamos `orElseW`:
-
-```ts
-const validateLoginName = (loginName: string) =>
-    pipe(
-        loginName,
-        validateEmail, // E.Either<'MalformedMail' | 'NotAnEmail', Email>
-        E.orElseW((e) =>
-            e === 'NotAnEmail' ?
-                validatePhoneNumber(loginName) :
-                E.left(e)
-        ), // Either<'MalformedEmail' | 'InvalidPhoneNumber', Email | PhoneNumber>
-    )
-```
-
-#### Definiendo Errores
-Si definimos los errores anteriores como tipos, en el caso del `email`:
-```ts
-type MalformedEmail = Readonly<{
-    type: 'MalformedEmail'
-    error: Error
-}>
-
-type NotAnEmail = Readonly<{
-    type: 'NotAnEmail'
-    error: Error
-}>
-
-const validateEmail = flow(
-    E.fromPredicate(
-        (maybeEmail: string) => emailRegex.test(maybeEmail),
-        (invalidEmail): MalformedEmail | NotAnEmail => 
-            invalidEmail.includes('@')
-                ? {
-                    type: 'MalformedEmail',
-                    error: new Error('Malformed email!'),
-                }
-                : {
-                    type: 'NorAnEmail',
-                    error: new Error('Not an email'),
-                }
-    ),
-    E.map((email): Email => 
-        ({ type: 'Email', value: email })),
-)
-```
-Mientras que en el caso del número de teléfono:
-```ts
-type InvalidPhoneNumber = Readonly<{
-    type: 'InvalidPhoneNumber'
-    error: Error
-}>
-
-const validatePhoneNumber = flow(
-    E.fromPredicate(
-        (maybePhoneNumber: string) => 
-            phoneNumberRegex.test(maybePhoneNumber),
-        (): InvalidPhoneNumber => ({
-            type: 'InvalidPhoneNumber'
-            error: new Error('Invalid phone number!')
-        }) 
-    ),
-    E.map((phoneNumber): PhoneNumber =>
-        ({ type: 'PhoneNumber', value: phoneNumber }))
-)
-```
-Esto nos acarrea un problema a la función `validateLoginName`, ya que Typescript no es capaz de inferir apropiadamente los tipos. Para ello se los indicamos explícitamente.
-```ts
-const validateLoginName = (loginName: string) =>
-    pipe(
-        loginName,
-        validateEmail, // E.Either<'MalformedMail' | 'NotAnEmail', Email>
-        E.orElseW((e): E.Either<InvalidPhoneNumber | MalformedEmail, PhoneNumber> =>
-            e === 'NotAnEmail' ?
-                validatePhoneNumber(loginName) :
-                E.left(e)
-        ), // Either<'MalformedEmail' | 'InvalidPhoneNumber', Email | PhoneNumber>
-    )
-```
-
-## Side-Effects y Funciones no Deterministas en FP-TS
-Se define `IO<A>` como un cómputo síncrono no-determinista que puede causar *side-effects*. A su vez, retorna un valor de tipo `A` y jamás falla.
-
-Esta abstracción permite mantener funciones *puras* a la vez que poseemos *side-effects*. En términos simples, un `IO` representa un *side-effect* sin ejecutarlo, en lugar de ello, genera una descripción de lo que *debería hacer* el *side-effect*.
-
-```ts
-type IO<A> = () => A
-
-// Ejemplos
-const random: IO<number> = () => Math.random()
-const now: IO<number> = () => Date.now()
-const greet: IO<void> = () => console.log('Hello, world!')
-
-const print = (s: string): IO<void> =>
-    () => console.log(s)
-```
-Esto mantiene a `print` como una función "pura", ya que siempre retorna "lo mismo" dado el mismo input. Se recomienda separar siempre el *side-effect* de la función.
+Gracias por leer :D
