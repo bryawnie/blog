@@ -41,7 +41,7 @@ Cuando postulé para trabajar en Bemmbo (ahora Buk Finanzas), Ismael, uno de los
 
 Al principio no me convenció del todo. Vi un tutorial de YouTube ([disponible aquí](https://www.youtube.com/watch?v=WsKEIFirdVc&list=PLUMXrUa_EuePN94nJ2hAui5nWDj8RO3lH)) donde explicaban lo básico: `pipe`, `flow`, `Option`, `Either`, `IO` y un montón de "modismos" que, si bien tenían sentido, se sentían como una capa extra sobre TypeScript. Mi primera impresión fue más o menos que "estamos metiendo wrappers innecesarios". Tenía que pensar primero cómo resolver una funcionalidad en TypeScript _vanilla_ y después darle otra vuelta para expresarla con la jerga de FP-TS. Eso me hizo ir muy lento al comienzo, y en mis primeras pull requests recibí bastante feedback.
 
-![Primeras pull requests en Bemmbo](media/first-pr-bemmbo.png)
+![Primeras pull requests en Bemmbo](/posts/first-pr-bemmbo.png)
 
 ### Interiorizando la idea
 
@@ -87,7 +87,7 @@ Eso sí, también me parece justo decir que fp-ts no es algo fácil de adoptar. 
 
 Y acá viene la parte más curiosa: si era tan bueno, ¿por qué se murió?
 
-![FP-TS meme](media/fp-ts.png)
+![FP-TS meme](/posts/fp-ts.png)
 
 Bueno, no se "murió" del todo, pero sí perdió fuerza. Por varios motivos:
 
