@@ -52,7 +52,7 @@ El proceso en general es simple, aunque debo admitir que me vi complicado en var
         deploy:
             runs-on: ubuntu-22.04
             steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
                 with:
                 submodules: true  # Fetch Hugo themes (true OR recursive)
                 fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
@@ -65,7 +65,7 @@ El proceso en general es simple, aunque debo admitir que me vi complicado en var
 
             # Opcional: establece un caché
             - name: Caching
-                uses: actions/cache@v2
+                uses: actions/cache@v4
                 with:
                 path: /tmp/hugo_cache
                 key: ${{ runner.os }}-hugomod-${{ hashFiles('**/go.sum') }}
@@ -82,6 +82,7 @@ El proceso en general es simple, aunque debo admitir que me vi complicado en var
                 publish_dir: ./public
         ```
         Recuerda hacer push!
+        > __Edit jul/2026:__ las actions v2 están deprecadas, se actualiza al uso de v4.
     - En Github, ir a las Configuraciones del repositorio, e ir al apartado general de *Actions*, presente en la barra lateral. Aquí, en la última sección, tenemos que dar permisos de *Lectura y Escritura* al flujo de trabajo. En resumen:
         - `Settings > Actions > General`
         - `Workflow permissions`
