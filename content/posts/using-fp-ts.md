@@ -1,5 +1,5 @@
 ---
-title: "Mi experiencia con FP-TS"
+title: "Mi experiencia con fp-ts"
 date: 2026-07-16T22:08:51-03:00
 draft: false
 ---
