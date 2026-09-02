@@ -19,7 +19,7 @@ Entonces, ya estaba la idea: una breve charla sobre hacking ético y los CTF, se
 
 ## La idea en acción
 
-En un principio, pensamos hacer algo simple: una charla de 20 minutos y luego añadir 3 desafíos básicos a la presentación para que los asistentes los resolvieran. El primero en hacerlo debía exponer su solución y así todos aprendíamos. 
+En un principio, pensamos hacer algo simple: una charla de 20 minutos y luego añadir 3 desafíos básicos a la presentación para que las y los asistentes los resolvieran. La primera persona en hacerlo debía exponer su solución y así tod@s aprendíamos. 
 
 El problema era que ese formato le quitaba mucho de la emoción, acortaba la ventana de tiempo, reducía la sensación de competencia real y, sobre todo, restaba la gamificación que considerábamos tan valiosa. Fue ahí cuando pensamos: "¿y si la hacemos en grande?". Pedimos un poco más de plazo para nuestra charla (¡gracias, Isma!) y nos pusimos a trabajar en serio.
 
