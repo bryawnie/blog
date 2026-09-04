@@ -33,11 +33,6 @@ url = "https://linkedin.com/in/bryortizp"
     url = '/about/'
     weight = 20
   [[Languages.es.menu.main]]
-    pageRef="how-to-git"
-    name = 'Git doggo'
-    url = '/how-to-git/'
-    weight = 30
-  [[Languages.es.menu.main]]
     pageRef="posts"
     name = 'Posts'
     url = '/posts/'
